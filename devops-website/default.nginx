@@ -1,0 +1,55 @@
+## /etc/nginx/default
+
+  root@my-quize-website-App:/etc/nginx/sites-available# cat default
+##
+# Default Nginx configuration for DevOps & Cloud Notes website
+##
+
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+
+    root /var/www/devops-website;   # Your website folder
+    index index.html index.htm;
+
+    server_name _;
+
+    # Main location block
+    location / {
+        try_files $uri $uri/ =404;
+    }
+
+    # Optional: prevent access to hidden files like .htaccess
+    location ~ /\. {
+        deny all;
+    }
+
+    # Optional: gzip compression for text files
+    gzip on;
+    gzip_types text/plain text/css application/javascript application/json text/xml application/xml application/xml+rss text/javascript;
+    gzip_min_length 256;
+
+    # Logging
+    access_log /var/log/nginx/devops_access.log;
+    error_log  /var/log/nginx/devops_error.log;
+
+    # PHP block (disabled for now)
+    # location ~ \.php$ {
+    #    include snippets/fastcgi-php.conf;
+    #    fastcgi_pass unix:/run/php/php7.4-fpm.sock;
+    # }
+}
+
+# Optional: Example virtual host template (commented)
+# server {
+#     listen 80;
+#     listen [::]:80;
+#     server_name example.com;
+#     root /var/www/example.com;
+#     index index.html;
+#     location / {
+#         try_files $uri $uri/ =404;
+#     }
+# }
+
+root@my-quize-website-App:/etc/nginx/sites-available#
