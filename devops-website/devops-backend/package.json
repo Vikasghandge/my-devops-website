@@ -1,0 +1,33 @@
+{
+  "name": "devops-backend",
+  "version": "1.0.0",
+  "description": "Code2Cloud DevOps Blog Backend API",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "prod": "NODE_ENV=production node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "devops",
+    "blog",
+    "api",
+    "express",
+    "mysql",
+    "backend"
+  ],
+  "author": "Vikas Ghandge",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.1.0",
+    "mysql2": "^3.15.2",
+    "multer": "^2.0.2",
+    "cors": "^2.8.5",
+    "bcryptjs": "^2.4.3",
+    "helmet": "^7.1.0",
+    "express-rate-limit": "^7.4.0",
+    "dotenv": "^16.4.5",
+    "twilio": "^5.10.3"
+  }
+}

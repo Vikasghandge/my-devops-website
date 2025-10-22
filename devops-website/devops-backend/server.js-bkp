@@ -1,0 +1,79 @@
+const express = require("express");
+const multer = require("multer");
+const mysql = require("mysql2");
+const cors = require("cors");
+const path = require("path");
+
+const app = express();
+app.use(express.json());
+app.use(cors());
+app.use("/uploads", express.static("uploads"));
+
+// ✅ DB connection
+const db = mysql.createConnection({
+  host: "127.0.0.1",         // EC2 localhost, MySQL in Docker
+  port: 3307,                // mapped Docker port
+  user: "root",              
+  password: "StrongPassword123!", 
+  database: "devops_blog"
+});
+
+db.connect(err => {
+  if (err) {
+    console.error("❌ Database connection failed:", err.message);
+  } else {
+    console.log("✅ Connected to MySQL Database!");
+  }
+});
+
+// ✅ Configure image uploads
+const storage = multer.diskStorage({
+  destination: "uploads/",
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + path.extname(file.originalname));
+  }
+});
+const upload = multer({ storage });
+
+// ✅ Create a new blog post
+app.post("/api/posts", upload.single("image"), (req, res) => {
+  const { title, content } = req.body;
+  const image = req.file ? `/uploads/${req.file.filename}` : null;
+  const sql = "INSERT INTO posts (title, content, image) VALUES (?, ?, ?)";
+  db.query(sql, [title, content, image], (err) => {
+    if (err) {
+      console.error("❌ Insert Error:", err);
+      return res.status(500).send(err);
+    }
+    res.send("✅ Post published successfully!");
+  });
+});
+
+// ✅ Fetch all posts (latest first)
+app.get("/api/posts", (req, res) => {
+  db.query("SELECT * FROM posts ORDER BY id DESC", (err, results) => {
+    if (err) {
+      console.error("❌ Fetch Error:", err);
+      return res.status(500).send(err);
+    }
+    res.json(results);
+  });
+});
+
+// ✅ Fetch a single post by ID
+app.get("/api/posts/:id", (req, res) => {
+  const { id } = req.params;
+  const sql = "SELECT * FROM posts WHERE id = ?";
+  db.query(sql, [id], (err, results) => {
+    if (err) {
+      console.error("❌ Fetch single post error:", err);
+      return res.status(500).send(err);
+    }
+    if (results.length === 0) return res.status(404).send("Post not found");
+    res.json(results[0]);
+  });
+});
+
+// ✅ Start server
+app.listen(5000, () => console.log("🚀 Backend running on port 5000"));
+

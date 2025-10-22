@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard - Code2Cloud</title>
+  <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background:#f3f4f6; margin:0; display:flex; }
+    .sidebar { background:#1e293b; color:#fff; width:240px; height:100vh; padding:20px; position:fixed; }
+    .sidebar h2 { text-align:center; margin-bottom:20px; font-size:20px; }
+    .menu-item { padding:10px; cursor:pointer; display:flex; align-items:center; gap:10px; border-radius:5px; }
+    .menu-item:hover, .menu-item.active { background:#2563eb; }
+    .main { flex:1; margin-left:260px; padding:20px; }
+    h1 { font-size:22px; margin-bottom:20px; color:#1e293b; }
+    input[type="text"], select { width:100%; padding:10px; margin-bottom:10px; border-radius:6px; border:1px solid #cbd5e1; }
+    #editor { height:250px; background:white; margin-bottom:15px; border-radius:6px; }
+    button { padding:10px 20px; background:#2563eb; border:none; border-radius:5px; color:#fff; cursor:pointer; }
+    button:hover { background:#1d4ed8; }
+    table { width:100%; border-collapse:collapse; background:white; border-radius:10px; overflow:hidden; }
+    th, td { padding:12px 15px; border-bottom:1px solid #e2e8f0; text-align:left; }
+    th { background:#f1f5f9; }
+    tr:hover { background:#f9fafb; }
+    .delete-btn { color:#ef4444; cursor:pointer; }
+    .delete-btn:hover { color:#dc2626; }
+  </style>
+</head>
+<body>
+
+  <div class="sidebar">
+    <h2>Code2Cloud</h2>
+    <div class="menu-item active" onclick="showSection('create')"><i class="fas fa-pen"></i>Create Post</div>
+    <div class="menu-item" onclick="showSection('all')"><i class="fas fa-file-alt"></i>All Posts</div>
+  </div>
+
+  <div class="main">
+    <div id="create-section">
+      <h1>Create New Post</h1>
+      <input type="text" id="title" placeholder="Enter title..." />
+      <select id="category">
+        <option value="">Select category</option>
+        <option value="DevOps">DevOps</option>
+        <option value="Cloud">Cloud</option>
+        <option value="Linux">Linux</option>
+        <option value="AWS">AWS</option>
+      </select>
+      <input type="file" id="image" />
+      <div id="editor"></div>
+      <button onclick="publishPost()">Publish Post</button>
+    </div>
+
+    <div id="all-section" style="display:none;">
+      <h1>All Posts</h1>
+      <table id="posts-table">
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Category</th>
+            <th>Date</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="posts-body">
+          <tr><td colspan="4" style="text-align:center;">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+  <script>
+    const backendURL = "http://65.2.123.59:5000/api";
+
+    const quill = new Quill("#editor", { theme: "snow", modules: { toolbar: [["bold","italic"],["link","image"]] } });
+
+    function showSection(section) {
+      document.getElementById("create-section").style.display = section==='create'?'block':'none';
+      document.getElementById("all-section").style.display = section==='all'?'block':'none';
+      document.querySelectorAll(".menu-item").forEach(i=>i.classList.remove("active"));
+      document.querySelector(`.menu-item:nth-child(${section==='create'?2:3})`).classList.add("active");
+      if(section==='all') loadPosts();
+    }
+
+    async function publishPost() {
+      const title = document.getElementById("title").value.trim();
+      const content = quill.root.innerHTML;
+      const category = document.getElementById("category").value;
+      const imageFile = document.getElementById("image").files[0];
+      if(!title || !content){ alert("Title and content required!"); return; }
+
+      const formData = new FormData();
+      formData.append("title", title);
+      formData.append("content", content);
+      formData.append("category", category);
+      if(imageFile) formData.append("image", imageFile);
+
+      const res = await fetch(`${backendURL}/posts`, { method:"POST", body:formData });
+      if(res.ok){
+        alert("✅ Post published!");
+        document.getElementById("title").value="";
+        quill.root.innerHTML="";
+        document.getElementById("image").value="";
+        loadPosts();
+      } else { alert("❌ Failed to publish post."); }
+    }
+
+    async function loadPosts() {
+      const tbody = document.getElementById("posts-body");
+      tbody.innerHTML="<tr><td colspan='4' style='text-align:center;'>Loading...</td></tr>";
+      try {
+        const res = await fetch(`${backendURL}/posts`);
+        if(!res.ok) throw new Error("Failed to fetch posts");
+        const posts = await res.json();
+        if(posts.length===0) { tbody.innerHTML="<tr><td colspan='4'>No posts found</td></tr>"; return; }
+        tbody.innerHTML = posts.map(p=>`
+          <tr>
+            <td>${p.title}</td>
+            <td>${p.category||"General"}</td>
+            <td>${new Date(p.created_at).toLocaleDateString()}</td>
+            <td><span class="delete-btn" onclick="deletePost(${p.id})"><i class="fas fa-trash"></i> Delete</span></td>
+          </tr>
+        `).join("");
+      } catch(err){ console.error(err); tbody.innerHTML="<tr><td colspan='4'>Error loading posts</td></tr>"; }
+    }
+
+    async function deletePost(id){
+      if(!confirm("Are you sure?")) return;
+      const res = await fetch(`${backendURL}/posts/${id}`,{method:"DELETE"});
+      if(res.ok){ alert("Deleted!"); loadPosts(); } else alert("Failed to delete post");
+    }
+
+  </script>
+</body>
+</html>
+

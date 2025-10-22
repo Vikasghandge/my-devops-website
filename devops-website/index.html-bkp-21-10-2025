@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Code2Cloud</title>
+  <style>
+    body {
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background: #f4f6f8;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background: #222;
+      color: white;
+      padding: 1em;
+      text-align: center;
+    }
+    nav a {
+      color: white;
+      margin: 0 10px;
+      text-decoration: none;
+    }
+    .container {
+      width: 90%;
+      max-width: 1000px;
+      margin: 20px auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+    }
+    article {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      transition: transform 0.2s ease;
+      display: flex;
+      flex-direction: column;
+    }
+    article:hover {
+      transform: translateY(-5px);
+    }
+    article h3 {
+      color: #0078d7;
+      margin-top: 0;
+    }
+    .post-content {
+      line-height: 1.6;
+      white-space: pre-wrap;
+      color: #444;
+      flex-grow: 1;
+    }
+    .post-image {
+      width: 100%;
+      max-height: 200px;
+      object-fit: cover;
+      border-radius: 10px;
+      margin-bottom: 10px;
+    }
+    .read-more {
+      margin-top: 10px;
+      padding: 8px 12px;
+      background: #0078d7;
+      color: white;
+      text-decoration: none;
+      border-radius: 6px;
+      text-align: center;
+      display: inline-block;
+      width: fit-content;
+    }
+    .read-more:hover {
+      background: #005ea2;
+    }
+    small {
+      display: block;
+      color: #777;
+      margin-top: 10px;
+      text-align: right;
+    }
+    footer {
+      text-align: center;
+      background: #f1f1f1;
+      padding: 10px;
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Code2Cloud</h1>
+    <nav>
+      <a href="/linux/basics.html">Linux</a>
+      <a href="/aws/ec2.html">AWS</a>
+      <a href="/devops/docker.html">DevOps</a>
+      <a href="/admin.html">Admin</a>
+    </nav>
+  </header>
+
+  <main class="container" id="posts">
+    <p>Loading articles...</p>
+  </main>
+
+  <footer>
+    <p>© 2025 Code2Cloud. All rights reserved.</p>
+  </footer>
+
+  <script>
+    async function loadPosts() {
+      try {
+        const res = await fetch("http://65.2.123.59:5000/api/posts");
+        const posts = await res.json();
+        const container = document.getElementById("posts");
+
+        if (posts.length === 0) {
+          container.innerHTML = "<p>No articles yet. Stay tuned!</p>";
+          return;
+        }
+
+        container.innerHTML = posts.map(p => {
+          const excerpt = p.content.length > 250 ? p.content.substring(0, 250) + "..." : p.content;
+          return `
+            <article>
+              <h3>${p.title}</h3>
+              ${p.image ? `<img src="http://65.2.123.59:5000${p.image}" class="post-image" alt="Post image">` : ""}
+              <div class="post-content">${excerpt}</div>
+              <a href="post.html?id=${p.id}" class="read-more">Read More</a>
+              <small>🕒 ${new Date(p.created_at).toLocaleString()}</small>
+            </article>
+          `;
+        }).join("");
+
+      } catch (error) {
+        document.getElementById("posts").innerHTML = "<p>⚠️ Failed to load posts.</p>";
+        console.error("Error loading posts:", error);
+      }
+    }
+
+    loadPosts();
+  </script>
+</body>
+</html>
+

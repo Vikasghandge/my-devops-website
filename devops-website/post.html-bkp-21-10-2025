@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Code2Cloud - Post</title>
+  <style>
+    body { font-family:"Segoe UI",sans-serif; background:#f4f6f8; padding:20px;}
+    h1 { color:#0078d7; }
+    img { max-width:100%; border-radius:10px; margin:15px 0; }
+    .content { line-height:1.6; white-space:pre-wrap; color:#444; }
+    small { display:block; color:#777; margin-top:10px; }
+  </style>
+</head>
+<body>
+  <h1 id="title">Loading...</h1>
+  <img id="image" src="" alt="" style="display:none;">
+  <div class="content" id="content"></div>
+  <small id="created_at"></small>
+
+  <script>
+    const backendURL = "http://65.2.123.59:5000/api";
+
+    async function loadPost(){
+      const id = new URLSearchParams(window.location.search).get("id");
+      if(!id){ document.getElementById("title").innerText="Post not found!"; return; }
+
+      try {
+        const res = await fetch(`${backendURL}/posts/${id}`);
+        if(!res.ok) throw new Error("Post not found");
+        const post = await res.json();
+
+        document.getElementById("title").innerText=post.title;
+        if(post.image){ const img=document.getElementById("image"); img.src=`http://65.2.123.59:5000${post.image}`; img.style.display="block"; }
+        document.getElementById("content").innerHTML=post.content;
+        document.getElementById("created_at").innerText="🕒 "+new Date(post.created_at).toLocaleString();
+      } catch(err){ console.error(err); document.getElementById("title").innerText="Failed to load post."; }
+    }
+
+    loadPost();
+

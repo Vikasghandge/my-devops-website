@@ -1,0 +1,125 @@
+// server.js
+const express = require("express");
+const multer = require("multer");
+const mysql = require("mysql2");
+const cors = require("cors");
+const path = require("path");
+const fs = require("fs");
+
+const app = express();
+app.use(express.json());
+app.use(cors());
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+// ----------------------------
+// ✅ Database connection
+// ----------------------------
+// Using host 127.0.0.1 and port 3307 to connect to Docker MySQL mapped port
+const db = mysql.createConnection({
+  host: "127.0.0.1",      // host machine
+  port: 3307,             // MySQL mapped port
+  user: "root",
+  password: "StrongPassword123!",
+  database: "devops_blog"
+});
+
+db.connect(err => {
+  if (err) {
+    console.error("❌ Database connection failed:", err.message);
+    process.exit(1); // exit if DB is not connected
+  } else {
+    console.log("✅ Connected to MySQL Database!");
+  }
+});
+
+// ----------------------------
+// ✅ Configure image uploads
+// ----------------------------
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = path.join(__dirname, "uploads");
+    if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + path.extname(file.originalname));
+  }
+});
+const upload = multer({ storage });
+
+// ----------------------------
+// ✅ Create a new blog post
+// ----------------------------
+app.post("/api/posts", upload.single("image"), (req, res) => {
+  const { title, content, category } = req.body;
+
+  if (!title || !content) {
+    return res.status(400).json({ success: false, message: "Title and content are required" });
+  }
+
+  const image = req.file ? `/uploads/${req.file.filename}` : null;
+  const sql = "INSERT INTO posts (title, content, category, image) VALUES (?, ?, ?, ?)";
+  db.query(sql, [title, content, category, image], (err) => {
+    if (err) {
+      console.error("❌ Insert Error:", err.message);
+      return res.status(500).json({ success: false, message: err.message });
+    }
+    res.json({ success: true, message: "Post published successfully!" });
+  });
+});
+
+// ----------------------------
+// ✅ Fetch all posts (latest first)
+// ----------------------------
+app.get("/api/posts", (req, res) => {
+  db.query("SELECT * FROM posts ORDER BY id DESC", (err, results) => {
+    if (err) {
+      console.error("❌ Fetch Error:", err.message);
+      return res.status(500).json({ success: false, message: err.message });
+    }
+    res.json(results);
+  });
+});
+
+// ----------------------------
+// ✅ Fetch single post
+// ----------------------------
+app.get("/api/posts/:id", (req, res) => {
+  const { id } = req.params;
+  db.query("SELECT * FROM posts WHERE id = ?", [id], (err, results) => {
+    if (err) {
+      console.error("❌ Fetch Error:", err.message);
+      return res.status(500).json({ success: false, message: err.message });
+    }
+    if (results.length === 0) return res.status(404).json({ success: false, message: "Post not found" });
+    res.json(results[0]);
+  });
+});
+
+// ----------------------------
+// ✅ Delete post
+// ----------------------------
+app.delete("/api/posts/:id", (req, res) => {
+  const { id } = req.params;
+
+  db.query("SELECT image FROM posts WHERE id = ?", [id], (err, results) => {
+    if (err) return res.status(500).json({ success: false, message: "Error fetching post" });
+    if (results.length === 0) return res.status(404).json({ success: false, message: "Post not found" });
+
+    const imagePath = results[0].image ? path.join(__dirname, results[0].image) : null;
+
+    db.query("DELETE FROM posts WHERE id = ?", [id], (err2) => {
+      if (err2) return res.status(500).json({ success: false, message: "Error deleting post" });
+
+      if (imagePath && fs.existsSync(imagePath)) fs.unlinkSync(imagePath);
+      res.json({ success: true, message: "Post deleted successfully!" });
+    });
+  });
+});
+
+// ----------------------------
+// ✅ Start server
+// ----------------------------
+const PORT = 5000;
+app.listen(PORT, () => console.log(`🚀 Backend running on port ${PORT}`));
+
